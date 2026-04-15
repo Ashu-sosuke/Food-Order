@@ -20,64 +20,43 @@ fun Navigation(
         startDestination = Screen.SplashScreen.route,
         modifier = modifier,
     ) {
-        // ── Splash ────────────────────────────────────────────────────────────
         composable(Screen.SplashScreen.route) {
             SplashScreen(
-                onUserLoggedIn = {
-                    navController.navigate(Screen.DashboardScreen.route) {
-                        popUpTo(Screen.SplashScreen.route) { inclusive = true }
-                    }
-                },
-                onGetStarted = {
-                    navController.navigate(Screen.LoginScreen.route) {
-                        popUpTo(Screen.SplashScreen.route) { inclusive = true }
-                    }
-                },
+                onUserLoggedIn = { navigateToMain(navController) },
+                onGetStarted = { navController.navigate(Screen.LoginScreen.route) }
             )
         }
 
-        // ── Login ─────────────────────────────────────────────────────────────
         composable(Screen.LoginScreen.route) {
             LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(Screen.DashboardScreen.route) {
-                        // Clears the login screen from history
-                        popUpTo(Screen.LoginScreen.route) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                onNavigateToSignUp = {
-                    navController.navigate(Screen.SignUpScreen.route)
-                },
+                onLoginSuccess = { navigateToMain(navController) },
+                onNavigateToSignUp = { navController.navigate(Screen.SignUpScreen.route) }
             )
         }
 
-        // ── Sign Up ───────────────────────────────────────────────────────────
         composable(Screen.SignUpScreen.route) {
             SignUpScreen(
-                onSignUpSuccess = {
-                    navController.navigate(Screen.DashboardScreen.route) {
-                        // Clears the signup screen from history
-                        popUpTo(Screen.SignUpScreen.route) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                onNavigateToLogin = {
-                    // Better to pop than navigate to avoid duplicate login screens
-                    navController.popBackStack()
-                },
+                onSignUpSuccess = { navigateToMain(navController) },
+                onNavigateToLogin = { navController.popBackStack() }
             )
         }
 
-        // ── Dashboard ─────────────────────────────────────────────────────────
-        composable(Screen.DashboardScreen.route) {
-            DashboardScreen(
+        // ── Main App (Authenticated) ──────────────────────────────────────────
+        composable("main_container") {
+            MainContainer(
                 onLogout = {
                     navController.navigate(Screen.LoginScreen.route) {
-                        popUpTo(Screen.DashboardScreen.route) { inclusive = true }
+                        popUpTo("main_container") { inclusive = true }
                     }
-                },
+                }
             )
         }
+    }
+}
+
+// Helper to clean up backstack when entering the app
+private fun navigateToMain(navController: NavHostController) {
+    navController.navigate("main_container") {
+        popUpTo(0) { inclusive = true }
     }
 }

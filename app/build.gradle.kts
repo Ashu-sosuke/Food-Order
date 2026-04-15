@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    kotlin("plugin.serialization")
 }
 
 android {
@@ -43,6 +44,14 @@ android {
 }
 
 dependencies {
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.android)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.client.content.negotiation)
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+
     implementation("io.coil-kt:coil-compose:2.6.0")
 
     val nav_version = "2.8.8"
@@ -50,8 +59,16 @@ dependencies {
 
     val firebaseBom = platform("com.google.firebase:firebase-bom:33.1.0")
     implementation(firebaseBom)
-    implementation("com.google.firebase:firebase-auth-ktx")      // Authentication
+    implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
+
+    // Ktor and Serialization
+    implementation("io.ktor:ktor-client-core:2.3.x")
+    implementation("io.ktor:ktor-client-android:2.3.x")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.x")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.x")
+// Coil for Image Loading (Essential for those high-quality food photos)
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

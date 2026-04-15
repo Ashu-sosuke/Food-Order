@@ -40,7 +40,6 @@ fun SplashScreen(
     onGetStarted: () -> Unit,
     authViewModel: AuthViewModel = viewModel(),
 ) {
-    // If user is already authenticated, skip splash after brief delay
     LaunchedEffect(Unit) {
         delay(600)
         if (authViewModel.currentUser != null) {

@@ -41,179 +41,113 @@ import coil.compose.AsyncImage
 import com.example.foodorder.data.FoodCategory
 import com.example.foodorder.data.FoodItem
 import com.example.foodorder.presentation.viewmodel.AuthViewModel
+import com.example.foodorder.presentation.viewmodel.CartViewModel
+import com.example.foodorder.presentation.viewmodel.FoodViewModel
 import com.example.foodorder.sampleCategories
-import com.example.foodorder.sampleFoodItems
 import com.example.foodorder.ui.theme.*
 
 @Composable
 fun DashboardScreen(
     onLogout: () -> Unit,
     authViewModel: AuthViewModel = viewModel(),
+    viewModel: FoodViewModel,
+    cartViewModel: CartViewModel
 ) {
-    // Ideally, get the real name from the ViewModel/Session
-    val userName = "Sarah"
+    val uiState by viewModel.uiState.collectAsState()
+    var selectedCategory by remember { mutableStateOf("Chicken") }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val displayItems = remember(uiState.meals, searchQuery) {
+        uiState.meals.filter {
+            it.name.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
     MaterialTheme(colorScheme = FoodAppColorScheme) {
-        var searchQuery by remember { mutableStateOf("") }
-        var selectedCategory by remember { mutableStateOf("All") }
-
-        val filteredItems = remember(selectedCategory, searchQuery) {
-            sampleFoodItems.filter {
-                val matchesCategory = selectedCategory == "All" ||
-                        it.category.equals(selectedCategory, ignoreCase = true)
-                val matchesSearch = it.name.contains(searchQuery, ignoreCase = true)
-                matchesCategory && matchesSearch
-            }
-        }
-
         Scaffold(
             containerColor = SoftBackground,
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // ── Header Section ──────────────────────────────────────────
-                    TopHeader(
-                        userName = userName,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    )
+                    // FIX: TopHeader was missing
+                    TopHeader(userName = "Sarah", modifier = Modifier.padding(16.dp))
 
                     FoodSearchBar(
                         query = searchQuery,
                         onQueryChange = { searchQuery = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // ── Categories ──────────────────────────────────────────────
                     Text(
                         text = "Categories",
                         style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold, color = TextPrimary
                         ),
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
+                    // Inside DashboardScreen.kt
                     CategoryRow(
                         categories = sampleCategories,
                         selectedLabel = selectedCategory,
-                        onCategorySelected = { selectedCategory = it },
+                        onCategorySelected = { categoryLabel ->
+                            selectedCategory = categoryLabel
+                            viewModel.loadMealsByCategory(categoryLabel)
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // ── Popular Section ──────────────────────────────────────────
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = "Popular Near You",
                             style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold, color = TextPrimary
                             ),
                         )
-                        TextButton(onClick = {}) {
-                            Text(
-                                "See All",
-                                style = MaterialTheme.typography.labelMedium.copy(color = DeepOrange),
-                            )
-                        }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    // ── Food Grid (Takes remaining space) ────────────────────────
-                    FoodGrid(
-                        items = filteredItems,
-                        onAddToCart = { /* Handle logic */ },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                            .padding(horizontal = 12.dp),
-                    )
+                    if (uiState.isLoading) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = DeepOrange)
+                        }
+                    } else if (uiState.errorMessage != null) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Error: ${uiState.errorMessage}", color = Color.Red)
+                        }
+                    } else {
+                        FoodGrid(
+                            items = displayItems,
+                            onAddToCart = { foodItem ->
+                                cartViewModel.addToCart(foodItem)
+                            }
+                        )
+                    }
                 }
 
-                // ── Logout Button Overlay ─────────────────────────────────────
                 Surface(
-                    onClick = {
-                        authViewModel.logout()
-                        onLogout()
-                    },
+                    onClick = { authViewModel.logout(); onLogout() },
                     shape = RoundedCornerShape(12.dp),
                     color = DeepOrange,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 12.dp, end = 16.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 16.dp),
                 ) {
-                    Text(
-                        text = "Logout",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    )
+                    Text("Logout", color = Color.White, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                 }
             }
         }
     }
 }
 
-@Composable
-private fun TopHeader(userName: String, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column {
-            Text(
-                text = "Good Morning, $userName! 👋",
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    color = TextPrimary,
-                ),
-            )
-            Text(
-                text = "What would you like to eat?",
-                style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
-            )
-        }
-
-        Box {
-            Surface(
-                shape = CircleShape,
-                color = CardBackground,
-                shadowElevation = 4.dp,
-                modifier = Modifier.size(42.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = null,
-                    tint = TextPrimary,
-                    modifier = Modifier.padding(10.dp),
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .background(Color.Red, CircleShape)
-                    .align(Alignment.TopEnd)
-                    .offset(x = (-2).dp, y = 2.dp),
-            )
-        }
-    }
-}
 
 @Composable
 private fun FoodSearchBar(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
@@ -309,6 +243,54 @@ private fun FoodGrid(items: List<FoodItem>, onAddToCart: (FoodItem) -> Unit, mod
 }
 
 @Composable
+private fun TopHeader(userName: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            Text(
+                text = "Good Morning, $userName! 👋",
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextPrimary,
+                ),
+            )
+            Text(
+                text = "What would you like to eat?",
+                style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
+            )
+        }
+
+        Box {
+            Surface(
+                shape = CircleShape,
+                color = CardBackground,
+                shadowElevation = 4.dp,
+                modifier = Modifier.size(42.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = null,
+                    tint = TextPrimary,
+                    modifier = Modifier.padding(10.dp),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .background(Color.Red, CircleShape)
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-2).dp, y = 2.dp),
+            )
+        }
+    }
+}
+
+
+
+@Composable
 private fun FoodCard(item: FoodItem, onAddToCart: () -> Unit) {
     var added by remember { mutableStateOf(false) }
     Card(
@@ -317,6 +299,7 @@ private fun FoodCard(item: FoodItem, onAddToCart: () -> Unit) {
         modifier = Modifier.shadow(4.dp, RoundedCornerShape(16.dp))
     ) {
         Column {
+            // FIX: The Price Tag Surface must be inside a BOX to use .align()
             Box(modifier = Modifier.fillMaxWidth().height(120.dp)) {
                 AsyncImage(
                     model = item.imageUrl,
@@ -327,9 +310,15 @@ private fun FoodCard(item: FoodItem, onAddToCart: () -> Unit) {
                 Surface(
                     shape = RoundedCornerShape(bottomStart = 12.dp),
                     color = DeepOrange,
-                    modifier = Modifier.align(Alignment.TopEnd)
+                    modifier = Modifier.align(Alignment.TopEnd) // This now works
                 ) {
-                    Text("$${item.price}", color = Color.White, modifier = Modifier.padding(6.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Rs ${item.price.toInt()}",
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
             Column(modifier = Modifier.padding(8.dp)) {
