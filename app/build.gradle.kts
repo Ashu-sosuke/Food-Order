@@ -50,6 +50,8 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.client.content.negotiation)
 
+    implementation("androidx.compose.material:material-icons-extended:1.6.0")
+
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 
     implementation("io.coil-kt:coil-compose:2.6.0")

@@ -1,34 +1,17 @@
 package com.example.foodorder.presentation.screens
 
-import com.example.foodorder.R
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,17 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.foodorder.data.CartItem
 import com.example.foodorder.presentation.viewmodel.CartViewModel
-import com.example.foodorder.ui.theme.CardBackground
-import com.example.foodorder.ui.theme.DeepOrange
-import com.example.foodorder.ui.theme.SoftBackground
-import com.example.foodorder.ui.theme.TextPrimary
-import com.example.foodorder.ui.theme.TextSecondary
+import com.example.foodorder.ui.theme.*
 
 @Composable
 fun CartScreen(
@@ -58,11 +38,19 @@ fun CartScreen(
 
     Scaffold(
         topBar = {
-            Text(
-                "My Cart",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(16.dp)
-            )
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp)) {
+                Text(
+                    text = "My Cart",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TextPrimary
+                    )
+                )
+                Text(
+                    text = "${uiState.items.size} items in your cart",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                )
+            }
         },
         bottomBar = {
             if (uiState.items.isNotEmpty()) {
@@ -73,18 +61,31 @@ fun CartScreen(
     ) { padding ->
         if (uiState.items.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Your cart is empty! 🥣", color = TextSecondary)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("🥣", fontSize = 60.sp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Your cart is empty!",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextSecondary
+                    )
+                }
             }
         } else {
-            LazyColumn(modifier = Modifier.padding(padding).padding(horizontal = 16.dp)) {
-                items(uiState.items) { item ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(uiState.items, key = { it.foodItem.id }) { item ->
                     CartItemRow(
                         item = item,
                         onIncrement = { viewModel.updateQuantity(item.foodItem.id, true) },
                         onDecrement = { viewModel.updateQuantity(item.foodItem.id, false) },
                         onRemove = { viewModel.removeItem(item.foodItem.id) }
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
         }
@@ -98,33 +99,87 @@ fun CartItemRow(
     onDecrement: () -> Unit,
     onRemove: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = CardBackground,
+        shadowElevation = 2.dp
     ) {
         Row(
-            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
                 model = item.foodItem.imageUrl,
                 contentDescription = null,
-                modifier = Modifier.size(70.dp).clip(RoundedCornerShape(12.dp)),
+                modifier = Modifier
+                    .size(85.dp)
+                    .clip(RoundedCornerShape(16.dp)),
                 contentScale = ContentScale.Crop
             )
-            Spacer(modifier = Modifier.width(12.dp))
+
+            Spacer(modifier = Modifier.width(16.dp))
+
             Column(Modifier.weight(1f)) {
-                Text(item.foodItem.name, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text("Rs ${item.foodItem.price.toInt()}", color = DeepOrange, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = item.foodItem.name,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    ),
+                    maxLines = 1
+                )
+                Text(
+                    text = "Rs ${item.foodItem.price.toInt()}",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = DeepOrange,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Modern Quantity Controls
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuantityButton(icon = Icons.Default.Remove, onClick = onDecrement)
+
+                    Text(
+                        text = "${item.quantity}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+
+                    QuantityButton(icon = Icons.Default.Add, onClick = onIncrement)
+                }
             }
 
-            // Quantity Controls
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onDecrement) { Icon(painterResource(R.drawable.baseline_remove_24), null) }
-                Text("${item.quantity}", fontWeight = FontWeight.Bold)
-                IconButton(onClick = onIncrement) { Icon(Icons.Default.Add, null) }
-                IconButton(onClick = onRemove) { Icon(Icons.Default.Delete, null, tint = Color.Red) }
+            IconButton(
+                onClick = onRemove,
+                colors = IconButtonDefaults.iconButtonColors(contentColor = Color.Red.copy(alpha = 0.7f))
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete")
             }
+        }
+    }
+}
+
+@Composable
+fun QuantityButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = SoftBackground,
+        modifier = Modifier.size(28.dp),
+        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = TextPrimary)
         }
     }
 }
@@ -134,25 +189,47 @@ fun CheckoutBar(total: Double) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = CardBackground,
-        shadowElevation = 8.dp,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shadowElevation = 20.dp,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
     ) {
         Row(
-            modifier = Modifier.padding(24.dp).navigationBarsPadding(),
+            modifier = Modifier
+                .padding(horizontal = 24.dp, vertical = 32.dp)
+                .navigationBarsPadding(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Total Bill", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
-                Text("Rs ${total.toInt()}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                Text(
+                    text = "Total Price",
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.labelMedium
+                )
+                Text(
+                    text = "Rs ${total.toInt()}",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TextPrimary
+                    )
+                )
             }
+
             Button(
-                onClick = { /* Checkout Logic */ },
+                onClick = { /* Proceed to Payment */ },
+                modifier = Modifier
+                    .height(56.dp)
+                    .width(160.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = DeepOrange),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.height(50.dp).width(140.dp)
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
             ) {
-                Text("Checkout", fontWeight = FontWeight.Bold)
+                Text(
+                    "Checkout",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                )
             }
         }
     }
