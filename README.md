@@ -7,9 +7,9 @@ A high-performance, native Android application built using **Jetpack Compose** a
 ## 📸 App Screenshots
 
 <p align="center">
-  <img src="screenshots/login.png" width="30%" alt="Login Screen" />
-  <img src="screenshots/dashboard.png" width="30%" alt="Dashboard Screen" />
-  <img src="screenshots/cart.png" width="30%" alt="Cart Screen" />
+  <img src="app/screenshots/login.png" width="30%" alt="Login Screen" />
+  <img src="app/screenshots/dashboard.png" width="30%" alt="Dashboard Screen" />
+  <img src="app/screenshots/cart.png" width="30%" alt="Cart Screen" />
 </p>
 
 | Authentication | Smart Dashboard | My Cart |
