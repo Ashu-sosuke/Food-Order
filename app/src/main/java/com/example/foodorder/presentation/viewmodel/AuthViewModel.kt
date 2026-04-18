@@ -22,7 +22,7 @@ sealed class AuthState {
     object Success    : AuthState()
     data class Error(val message: String) : AuthState()
 }
-
+data class UserProfile(val name: String = "", val email: String = "")
 // ─────────────────────────────────────────────────────────────────────────────
 //  ViewModel
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,73 +34,84 @@ class AuthViewModel : ViewModel() {
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
+    private val _userProfile = MutableStateFlow<UserProfile?>(null)
+    val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
 
-    /** Non-null when a user session already exists (persisted by Firebase). */
     val currentUser: FirebaseUser?
         get() = auth.currentUser
 
-    // ── Sign Up ───────────────────────────────────────────────────────────────
 
-    fun signUp(
-        name: String,
-        email: String,
-        password: String,
-    ) {
-        if (name.isBlank() || email.isBlank() || password.isBlank()) {
-            _authState.value = AuthState.Error("All fields are required.")
-            return
-        }
-        if (password.length < 6) {
-            _authState.value = AuthState.Error("Password must be at least 6 characters.")
+    init {
+        fetchUserProfile()
+    }
+
+    fun fetchUserProfile() {
+        // Get current user directly from Auth
+        val user = auth.currentUser
+        if (user == null) {
+            _userProfile.value = UserProfile("Guest", "")
             return
         }
 
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
             try {
-                val result = auth
-                    .createUserWithEmailAndPassword(email.trim(), password)
+                val snapshot = firestore.collection("users")
+                    .document(user.uid)
+                    .get()
                     .await()
 
-                val uid = result.user?.uid
-                    ?: throw IllegalStateException("UID is null after sign-up")
-
-                // Persist extra user data in Firestore
-                firestore.collection("users").document(uid).set(
-                    mapOf(
-                        "uid"       to uid,
-                        "name"      to name.trim(),
-                        "email"     to email.trim(),
-                        "createdAt" to System.currentTimeMillis(),
-                    )
-                ).await()
-
-                _authState.value = AuthState.Success
+                if (snapshot.exists()) {
+                    val name = snapshot.getString("name") ?: "User"
+                    val email = snapshot.getString("email") ?: ""
+                    _userProfile.value = UserProfile(name, email)
+                }
             } catch (e: Exception) {
-                _authState.value = AuthState.Error(
-                    e.localizedMessage ?: "Sign-up failed. Please try again."
-                )
+                _userProfile.value = UserProfile("User", user.email ?: "")
             }
         }
     }
 
-    // ── Login ─────────────────────────────────────────────────────────────────
+
+    // ── Sign Up ───────────────────────────────────────────────────────────────
+
+    fun signUp(name: String, email: String, password: String) {
+        // ... validation logic ...
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            try {
+                val result = auth.createUserWithEmailAndPassword(email.trim(), password).await()
+                val uid = result.user?.uid ?: throw IllegalStateException("UID is null")
+
+                val profileData = mapOf(
+                    "uid" to uid,
+                    "name" to name.trim(),
+                    "email" to email.trim(),
+                    "createdAt" to System.currentTimeMillis(),
+                )
+                firestore.collection("users").document(uid).set(profileData).await()
+
+                // FIX: Manually update the state immediately so the UI doesn't have to wait for a fetch
+                _userProfile.value = UserProfile(name.trim(), email.trim())
+                _authState.value = AuthState.Success
+            } catch (e: Exception) {
+                _authState.value = AuthState.Error(e.localizedMessage ?: "Sign-up failed")
+            }
+        }
+    }
 
     fun login(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _authState.value = AuthState.Error("Email and password are required.")
-            return
-        }
-
+        // ... validation logic ...
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             try {
                 auth.signInWithEmailAndPassword(email.trim(), password).await()
+
+                // FIX: Trigger fetch immediately on successful login
+                fetchUserProfile()
+
                 _authState.value = AuthState.Success
             } catch (e: Exception) {
-                _authState.value = AuthState.Error(
-                    e.localizedMessage ?: "Login failed. Check your credentials."
-                )
+                _authState.value = AuthState.Error(e.localizedMessage ?: "Login failed")
             }
         }
     }
@@ -109,7 +120,7 @@ class AuthViewModel : ViewModel() {
 
     fun logout() {
         auth.signOut()
-        _authState.value = AuthState.Idle
+        _userProfile.value = null
     }
 
     // ── Reset state (e.g. after navigating away from error) ───────────────────

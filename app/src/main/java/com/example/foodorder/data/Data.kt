@@ -42,6 +42,11 @@ fun MealDto.toFoodItem(category: String): FoodItem {
     )
 }
 
+data class AppNavDestination(
+    val route: String,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+)
 
 data class FoodUiState(
     val isLoading: Boolean = false,
